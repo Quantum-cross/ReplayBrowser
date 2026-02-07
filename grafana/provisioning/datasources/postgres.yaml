@@ -15,6 +15,7 @@ datasources:
       password: "ErFAUeWx78gpgtWUnLq8"
 
     jsonData:
+      database: replaybrowser
       sslmode: "disable"
       postgresVersion: 1500
       timescaledb: false
