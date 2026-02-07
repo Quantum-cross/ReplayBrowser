@@ -95,7 +95,7 @@ public class Replay : IEntityTypeConfiguration<Replay>
             .GroupBy(p => p.PlayerGuid)
             .Select(pg => new ReplayParticipant {
                 PlayerGuid = pg.Key,
-                Players = pg.Select(yp => Player.FromYaml(yp)).ToList(),
+                Players = pg.Select(yp => Player.FromYaml(yp).ParseObjectives(replay.RoundEndText)).ToList(),
                 Username = pg.First().PlayerOocName
             })
             .ToList();

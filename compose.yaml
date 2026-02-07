@@ -1,0 +1,9 @@
+﻿services:
+  replaybrowser-postgres:
+    image: docker.io/postgres
+    environment:
+      POSTGRES_DB: replaybrowser
+      POSTGRES_USER: replaybrowser
+      POSTGRES_PASSWORD: ErFAUeWx78gpgtWUnLq8
+    ports:
+      - "5432:5432"
