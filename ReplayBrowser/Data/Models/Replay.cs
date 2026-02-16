@@ -102,6 +102,8 @@ public class Replay : IEntityTypeConfiguration<Replay>
 
         link ??= replay.Link ?? throw new ArgumentException("Link is required.");
 
+        var roundEndText = replay.RoundEndText?.Replace("\r", "").Replace("\n", "\\n");
+
         return new Replay {
             Link = link,
             ServerId = replay.ServerId,
@@ -112,7 +114,7 @@ public class Replay : IEntityTypeConfiguration<Replay>
             Maps = replay.Maps,
 
             RoundParticipants = participants,
-            RoundEndText = replay.RoundEndText,
+            RoundEndText = roundEndText,
 
             EndTick = replay.EndTick,
             Duration = replay.Duration,
