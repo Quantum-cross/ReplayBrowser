@@ -307,6 +307,9 @@ public class ReplayParserService : IHostedService, IDisposable
             throw new Exception("Replay is not valid.");
         }
 
+        yamlReplay.RoundEndText = yamlReplay.RoundEndText?.Replace("\r", "");
+        yamlReplay.RoundEndText = yamlReplay.RoundEndText?.Replace("\n", "\\n");
+
         return yamlReplay;
     }
 
