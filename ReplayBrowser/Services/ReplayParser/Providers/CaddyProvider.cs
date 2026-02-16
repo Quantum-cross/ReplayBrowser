@@ -31,7 +31,7 @@ public class CaddyProvider : ReplayProvider
             }
             else if (caddyResponse.IsDir)
             {
-                await RetrieveFilesRecursive(directoryUrl + caddyResponse.Name, token);
+                await RetrieveFilesRecursive($"{directoryUrl}/{caddyResponse.Name}", token);
             }
         }
     }

@@ -423,20 +423,12 @@ public class ReplayController : Controller
             replay = _replayParserService.ParseReplayYaml(replayYaml, null);
             var replayFileName = Path.GetFileName(replay.Link);
             var storageUrl = _replayParserService.GetStorageUrlFromReplayLink(replay.Link);
-            var match = storageUrl.ReplayRegexCompiled.Match(replayFileName);
-            if (match.Success)
+
+            if (!ReplayParserService.TryParseDateTime(replayFileName, storageUrl, out var parsedDate))
             {
-                try
-                {
-                    var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy_MM_dd-HH_mm", CultureInfo.InvariantCulture);
-                    replay.Date = date.ToUniversalTime();
-                }
-                catch (FormatException)
-                {
-                    var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                    replay.Date = date.ToUniversalTime();
-                }
+                return BadRequest("Could not parse date from replay file name.");
             }
+            replay.Date = parsedDate.Value.ToUniversalTime();
         }
         catch (Exception e)
         {

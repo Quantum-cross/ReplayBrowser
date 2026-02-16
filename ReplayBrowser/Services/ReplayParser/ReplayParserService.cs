@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO.Compression;
 using System.Runtime.CompilerServices;
@@ -222,20 +223,9 @@ public class ReplayParserService : IHostedService, IDisposable
                         // See if the link matches the date regex, if it does set the date
                         var replayFileName = Path.GetFileName(replay);
                         var storageUrl = GetStorageUrlFromReplayLink(replay);
-                        var match = storageUrl.ReplayRegexCompiled.Match(replayFileName);
-                        if (match.Success)
+                        if (TryParseDateTime(replayFileName, storageUrl, out var parsedDate))
                         {
-                            try
-                            {
-                                var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy_MM_dd-HH_mm", CultureInfo.InvariantCulture);
-                                // Need to mark it as UTC, since the server is in UTC.
-                                parsedReplay.Date = date.ToUniversalTime();
-                            }
-                            catch (FormatException)
-                            {
-                                var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                                parsedReplay.Date = date.ToUniversalTime();
-                            }
+                            parsedReplay.Date = parsedDate.Value.ToUniversalTime();
                         }
 
                         // One more check to see if it's already in the database.
@@ -398,36 +388,47 @@ public class ReplayParserService : IHostedService, IDisposable
         return fetched;
     }
 
-    public async Task AddReplayToQueue(string replay)
+    public static bool TryParseDateTime(string replayFileName, StorageUrl storageUrl, [NotNullWhen(true)] out DateTime? parsedDate)
     {
         // Use regex to check and retrieve the date from the file name.
-        var storageUrl = GetStorageUrlFromReplayLink(replay);
-        var fileName = Path.GetFileName(replay);
-        var match = storageUrl.ReplayRegexCompiled.Match(fileName);
+        var match = storageUrl.ReplayRegexCompiled.Match(replayFileName);
+        
+        parsedDate = null;
+        
         if (match.Success)
         {
-            try
+            if (!DateTime.TryParseExact(match.Groups[1].Value, "yyyy_MM_dd-HH-mm", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out var outDate) &&
+                !DateTime.TryParseExact(match.Groups[1].Value, "yyyy_MM_dd-HH_mm", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out outDate) &&
+                !DateTime.TryParseExact(match.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out outDate) &&
+                !DateTime.TryParseExact(match.Groups[1].Value, "yyyy_MM_dd", CultureInfo.InvariantCulture,
+                    DateTimeStyles.None, out outDate)
+                )
             {
-                var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy_MM_dd-HH_mm", CultureInfo.InvariantCulture);
-                if (date < CutOffDateTime)
-                {
-                    return;
-                }
-            }
-            catch (FormatException)
-            {
-                var date = DateTime.ParseExact(match.Groups[1].Value, "yyyy-MM-dd", CultureInfo.InvariantCulture);
-                if (date < CutOffDateTime)
-                {
-                    return;
-                }
+                Log.Warning("Replay " + replayFileName + " does not match the regex.");
+                return false;
             }
 
-        } else
-        {
-            Log.Warning("Replay " + replay + " does not match the regex.");
+            if (outDate < CutOffDateTime)
+                return false;
+            
+            parsedDate = outDate;
+            return true;
+        } 
+        
+        Log.Warning("Replay " + replayFileName + " does not match the regex.");
+        return false;
+    }
+    
+    public async Task AddReplayToQueue(string replay)
+    {
+        var storageUrl = GetStorageUrlFromReplayLink(replay);
+        var fileName = Path.GetFileName(replay);
+        
+        if (!TryParseDateTime(fileName, storageUrl, out _))
             return;
-        }
 
         // If it's already in the database, skip it.
         //if (await IsReplayParsed(replay))
